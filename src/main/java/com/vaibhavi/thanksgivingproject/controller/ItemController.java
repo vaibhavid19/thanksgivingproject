@@ -1,9 +1,13 @@
 package com.vaibhavi.thanksgivingproject.controller;
 
+import com.vaibhavi.thanksgivingproject.Exception.ItemNotFound;
 import com.vaibhavi.thanksgivingproject.entity.Item;
 import com.vaibhavi.thanksgivingproject.repository.ItemRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/object")
@@ -12,68 +16,54 @@ public class ItemController {
     @Autowired
     ItemRepository itemRepository;
 
-    @PostMapping("/create/item/{className}")
-    public Item addItem(@RequestBody Item item, @PathVariable String className){
+    //Added functionality for scenario 1 and 2 in this method
+    @PostMapping("/create/{name}")
+    public Item createItem(@RequestBody Item item, @PathVariable String name){
+        if (item.getId() != 0) {
+            if(itemRepository.existsById(item.getId())) {
+                return this.itemRepository.save(item);
+            } else {
+                throw new ItemNotFound();
+            }
+        }
         return this.itemRepository.save(item);
     }
 
-//    Scenario: Create where object is in data store.
-//    Given An object of type  "item" with the format { "id": 1, "name": "sword" }, that is in the data store.
-//    When a POST call is made to /object/create/{className}
-//    Then The object that has type=="item" and "id"==1 will be overwritten in the data store and a 200 is returned.
-//    All objects have an "id" field that holds their key value.
-
-//    Scenario: Delete item that IS in the data store.
-//    Given An object of type  "item" with the format { "id": 1, "name": "sword" }
-//    When a POST call is made to /object/delete/{className}/{id}
-//    Then The object is deleted from the data store and a 200 is returned.
-
-//    Scenario: Delete item that is NOT in the data store.
-//    Given An object of type  "item" with the format { "id": 1, "name": "sword" }
-//    When a POST call is made to /object/delete/{className}/{id}
-//    Then The object is not found and the service returns 404.
-
-//    Scenario: Get a specific item.
-//    Given An object of type  "item" with the format { "id": 1, "name": "sword" } is in the data store.
-//    When a GET call is made to /object/get/{className}/{id}
-//    Then The object is returned in json format along with a 200 code.
-
-//    Scenario: Get a specific item but it is not in the data store.
-//    Given An object of type  "item" with the format { "id": 1, "name": "sword" } is not in the data store.
-//    When a GET call is made to /object/get/{className}/{id}
-//    Then The service returns 404.
-
-//    Scenario: Get all items of a specific type.
-//    Given Several objects of type  "item" are in the data store.
-//    When a GET call is made to /object/get/{className}
-//    Then The service returns a JSON array of all the items that match the className (could be an empty array) and a 200.
-
-//    Scenario: Get all items in the registry.
-//    Given Several objects are in the data store.
-//    When a GET call is made to /object/get/
-//    Then The service returns a JSON array of all the items in the data store(could be an empty array) and a 200.
-
-
-    /*@DeleteMapping("/api/review/delete")
-    public void deleteReviewById(@RequestParam long reviewerId, @RequestParam long reviewId){
-        Review review = this.repository.findByReviewerAndReviewId(reviewerId, reviewId);
-        if(review!=null){
-            this.repository.deleteById(review.getReviewId());
-        } else {
-            throw new RuntimeException();
+    // ** DO NOT USE **
+    //Added functionality for scenario 2 independently in this method, if required
+    // Error - Request method 'POST' not supported" - because to send id in RequestBody, PUT call is assumed
+    @PutMapping("/update/{name}/{id}")
+    public Item updateItem(@RequestBody Item item, @PathVariable String name, @PathVariable int id){
+        if(!itemRepository.existsById(id)) {
+                throw new ItemNotFound();
         }
+        return this.itemRepository.save(item);
     }
 
-    @PutMapping("/api/review/update")
-    public Review updateReview(@RequestParam long movieId, @RequestParam long reviewerId, @RequestBody String reviewText){
-        Review review = this.repository.findReviewByMovieAndReviewerId(movieId, reviewerId);
-        return this.repository.save(review);
+    @DeleteMapping("/delete/{name}/{id}")
+    public void deleteItem(@PathVariable int id, @PathVariable String name) throws Exception {
+        if (!this.itemRepository.existsById(id)) {
+            throw new ItemNotFound();
+        }
+        this.itemRepository.deleteById(id);
     }
 
-    @GetMapping("/api/movies/all")
-    public Iterable<Movie> getAll() {
-        return this.movieRepository.findAll();
-    }*/
+    @GetMapping("/get/{name}/{id}")
+    public Item getItemByIdAndName(@PathVariable int id, @PathVariable String name){
+        Optional<Item> itemFromDb = this.itemRepository.findByItemNameAndId(id, name);
+        if (!itemFromDb.isPresent()) {
+            throw new ItemNotFound();
+        }
+        return itemFromDb.get();
+    }
 
+    @GetMapping("/get/{name}")
+    public List<Item> getItemsByName(@PathVariable String name){
+        return this.itemRepository.findByItemName(name);
+    }
 
+    @GetMapping("/get")
+    public List<Item> getAllItems() {
+        return (List<Item>) this.itemRepository.findAll();
+    }
 }
